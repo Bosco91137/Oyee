@@ -13,12 +13,18 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     transition: background-color var(--transition-speed), color var(--transition-speed);
     overflow-x: hidden;
+    line-height: 1.6;
 }
 
 .container {
@@ -28,7 +34,7 @@ body {
     padding: 0 20px;
 }
 
-/* Typographie */
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     line-height: 1.2;
@@ -83,7 +89,7 @@ a:hover {
     color: var(--text-color);
 }
 
-/* Boutons */
+/* Buttons */
 .btn {
     display: inline-block;
     padding: 10px 25px;
@@ -227,6 +233,11 @@ a:hover {
     transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
+.animate-text.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .social-icons {
     margin-top: 30px;
 }
@@ -324,6 +335,11 @@ a:hover {
     transform: translateY(20px);
 }
 
+.competence-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .competence-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
@@ -383,6 +399,11 @@ a:hover {
     transform: translateY(20px);
 }
 
+.projet-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .projet-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
@@ -434,6 +455,11 @@ a:hover {
     transform: translateY(20px);
 }
 
+.service-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .service-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
@@ -469,6 +495,11 @@ a:hover {
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     opacity: 0;
     transform: translateY(20px);
+}
+
+.skill-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .skill-card:hover {
@@ -508,6 +539,11 @@ a:hover {
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     opacity: 0;
     transform: translateY(20px);
+}
+
+.title-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .title-card:hover {
@@ -565,6 +601,11 @@ a:hover {
     transition: transform var(--transition-speed);
     opacity: 0;
     transform: translateY(20px);
+}
+
+.stat-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .stat-card h3 {
@@ -643,6 +684,11 @@ a:hover {
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     opacity: 0;
     transform: translateY(20px);
+}
+
+.testimonial-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .testimonial-card:hover {
@@ -944,17 +990,27 @@ a:hover {
 }
 
 @media (max-width: 768px) {
+    html {
+        scroll-padding-top: 70px;
+    }
+    
+    .navbar {
+        padding: 15px 0;
+    }
+    
     .nav-links {
         position: fixed;
-        top: 80px;
+        top: 70px;
         left: -100%;
         width: 100%;
-        height: calc(100vh - 80px);
-        background-color: var(--bg-color);
+        height: calc(100vh - 70px);
+        background-color: rgba(0, 0, 0, 0.95);
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
+        padding: 40px 20px;
         transition: left var(--transition-speed);
+        overflow-y: auto;
     }
     
     .nav-links.active {
@@ -962,7 +1018,13 @@ a:hover {
     }
     
     .nav-links li {
-        margin: 20px 0;
+        margin: 15px 0;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .nav-links a {
+        font-size: 1.2rem;
     }
     
     .hamburger {
@@ -977,8 +1039,59 @@ a:hover {
         font-size: 2rem;
     }
     
+    .section {
+        padding: 70px 0;
+    }
+    
+    .section-title {
+        margin-bottom: 40px;
+    }
+    
+    .accueil {
+        min-height: auto;
+        padding: 70px 0 40px;
+    }
+    
+    .image-wrapper {
+        width: 280px;
+        height: 400px;
+    }
+    
+    .domaines-footer {
+        margin-top: 30px;
+    }
+    
+    .competences,
+    .projets,
+    .services {
+        margin-bottom: 40px;
+    }
+    
+    .competences-grid,
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+    
     .projets-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .apropos-image .image-wrapper {
+        height: 400px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .audio-control {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .audio-control button {
+        width: 40px;
+        height: 40px;
     }
 }
 
@@ -1000,17 +1113,15 @@ a:hover {
     }
     
     .image-wrapper {
-        width: 280px;
-        height: 400px;
+        width: 250px;
+        height: 350px;
     }
     
-    .audio-control {
-        bottom: 20px;
-        right: 20px;
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
     
-    .audio-control button {
-        width: 40px;
-        height: 40px;
+    .apropos-image .image-wrapper {
+        height: 350px;
     }
 }
