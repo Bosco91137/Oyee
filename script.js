@@ -17,37 +17,42 @@ document.addEventListener('DOMContentLoaded', function() {
     let isPlaying = false;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    // Initialize Audio
+    // Initialize Audio - Auto play on load
     function initAudio() {
         if (songs.length === 0) return;
         
         backgroundAudio.src = songs[currentSongIndex];
         backgroundAudio.volume = 0.4;
+        backgroundAudio.loop = true;
         backgroundAudio.addEventListener('ended', playNextSong);
         
-        // Start audio on first interaction (mobile requires user gesture)
-        const initAudioPlay = () => {
-            if (isPlaying) return;
-            
-            const playPromise = backgroundAudio.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    isPlaying = true;
-                    audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                }).catch(error => {
-                    console.log('Audio playback prevented:', error);
-                    // Show play button if autoplay was prevented
-                    audioToggle.innerHTML = '<i class="fas fa-play"></i>';
-                });
-            }
-        };
+        // Try to play automatically (may be blocked by browser policy)
+        const playPromise = backgroundAudio.play();
         
-        // Add click event to document for audio initialization
-        document.addEventListener('click', initAudioPlay, { once: true });
-        
-        // Also add to audio toggle button
-        audioToggle.addEventListener('click', initAudioPlay, { once: true });
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                isPlaying = true;
+                audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+            }).catch(error => {
+                console.log('Auto-play was prevented:', error);
+                // Show play button if autoplay was prevented
+                audioToggle.innerHTML = '<i class="fas fa-play"></i>';
+                isPlaying = false;
+                
+                // Add click event to document for audio initialization
+                const initAudioOnClick = () => {
+                    backgroundAudio.play().then(() => {
+                        isPlaying = true;
+                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                        document.removeEventListener('click', initAudioOnClick);
+                    }).catch(err => {
+                        console.log('Playback failed:', err);
+                    });
+                };
+                
+                document.addEventListener('click', initAudioOnClick, { once: true });
+            });
+        }
     }
 
     function playNextSong() {
@@ -57,7 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Audio Toggle
-    audioToggle.addEventListener('click', function() {
+    audioToggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent triggering document click handler
+        
         if (songs.length === 0) return;
         
         if (isPlaying) {
