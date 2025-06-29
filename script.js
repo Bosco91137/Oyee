@@ -28,6 +28,13 @@ document.addEventListener('DOMContentLoaded', function() {
         'contact': { bg: '#0f3460', text: '#e8f9fd', accent: '#533483' }
     };
 
+    // Animation timing
+    const animationSettings = {
+        fadeInDuration: 800,
+        staggerDelay: 100,
+        threshold: 0.2
+    };
+
     // Initialize Audio with aggressive autoplay
     function initAudio() {
         if (songs.length === 0) return;
@@ -37,9 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
         backgroundAudio.volume = 0.4;
         backgroundAudio.loop = true;
         backgroundAudio.preload = "auto";
-        backgroundAudio.muted = false; // Ensure not muted
+        backgroundAudio.muted = false;
         
-        // Create audio context (required for some browsers)
+        // Create audio context
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             const audioContext = new AudioContext();
@@ -62,10 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 playPromise.then(() => {
                     isPlaying = true;
                     audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                    console.log('Playback started successfully');
                 }).catch(error => {
                     console.log('Playback prevented:', error);
-                    // If blocked, wait for user interaction
                     const playOnInteraction = () => {
                         backgroundAudio.play().then(() => {
                             isPlaying = true;
@@ -87,11 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Try to play immediately
         attemptPlayback();
-        
-        // Also try when audio is ready
         backgroundAudio.addEventListener('canplaythrough', attemptPlayback);
-        
-        // Handle song ending
         backgroundAudio.addEventListener('ended', playNextSong);
     }
 
@@ -167,33 +168,70 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Section Animations and Theme Changes
+    // Theme transition animation
+    function applyThemeTransition(newTheme) {
+        body.style.transition = 'background-color 0.8s ease, color 0.8s ease';
+        document.documentElement.style.setProperty('--bg-color', newTheme.bg);
+        document.documentElement.style.setProperty('--text-color', newTheme.text);
+        document.documentElement.style.setProperty('--accent-color', newTheme.accent);
+        
+        // Remove transition after animation completes
+        setTimeout(() => {
+            body.style.transition = 'none';
+        }, 800);
+    }
+
+    // Progressive element animation
+    function animateElements(section) {
+        const animatableElements = section.querySelectorAll(
+            '.animate-text, .competence-card, .projet-card, .service-card, ' +
+            '.skill-card, .title-card, .stat-card, .testimonial-card'
+        );
+        
+        animatableElements.forEach((el, index) => {
+            // Skip if already animated
+            if (el.classList.contains('animated')) return;
+            
+            // Set initial state
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = `opacity ${animationSettings.fadeInDuration}ms ease-out, transform ${animationSettings.fadeInDuration}ms ease-out`;
+            el.style.transitionDelay = `${index * animationSettings.staggerDelay}ms`;
+            
+            // Trigger animation
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+                el.classList.add('animated');
+            }, 50);
+        });
+    }
+
+    // Section detection and handling
     function handleSectionChanges() {
         sections.forEach(section => {
             const rect = section.getBoundingClientRect();
             const sectionId = section.id;
             const theme = sectionThemes[sectionId];
             
-            // Check if section is in view
-            if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+            // Calculate visibility percentage
+            const visibility = Math.min(
+                1,
+                Math.max(
+                    0,
+                    (Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0)
+                ) / Math.min(rect.height, window.innerHeight)
+            );
+            
+            // If section is significantly visible
+            if (visibility > animationSettings.threshold) {
                 // Apply theme if section is active
                 if (theme) {
-                    document.documentElement.style.setProperty('--bg-color', theme.bg);
-                    document.documentElement.style.setProperty('--text-color', theme.text);
-                    document.documentElement.style.setProperty('--accent-color', theme.accent);
+                    applyThemeTransition(theme);
                 }
                 
                 // Animate elements
-                const elements = section.querySelectorAll(
-                    '.animate-text, .competence-card, .projet-card, .service-card, ' +
-                    '.skill-card, .title-card, .stat-card, .testimonial-card'
-                );
-                
-                elements.forEach((el, index) => {
-                    setTimeout(() => {
-                        el.classList.add('visible');
-                    }, index * 100);
-                });
+                animateElements(section);
             }
         });
     }
@@ -203,17 +241,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initial check
         handleSectionChanges();
         
-        // Set up scroll listener
-        let isScrolling;
+        // Set up optimized scroll listener
+        let ticking = false;
         window.addEventListener('scroll', function() {
-            // Clear the timeout if it's already set
-            clearTimeout(isScrolling);
-            
-            // Set a timeout to run after scrolling stops
-            isScrolling = setTimeout(function() {
-                handleSectionChanges();
-            }, 100);
-        }, false);
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    handleSectionChanges();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
     }
 
     // Contact Form
