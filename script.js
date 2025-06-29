@@ -30,8 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Animation timing
     const animationSettings = {
-        fadeInDuration: 800,
-        staggerDelay: 100,
+        fadeInDuration: 50,
+        staggerDelay: 50,
         threshold: 0.2
     };
 
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove transition after animation completes
         setTimeout(() => {
             body.style.transition = 'none';
-        }, 800);
+        }, 100);
     }
 
     // Progressive element animation
