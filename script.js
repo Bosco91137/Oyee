@@ -35,64 +35,105 @@ document.addEventListener('DOMContentLoaded', function() {
         threshold: 0.2
     };
 
-    // Initialize Audio with aggressive autoplay
+    // Initialize Audio with maximum autoplay attempts
     function initAudio() {
         if (songs.length === 0) return;
         
-        // Create audio element with all necessary attributes
+        // Configure audio element
         backgroundAudio.src = songs[currentSongIndex];
         backgroundAudio.volume = 0.4;
         backgroundAudio.loop = true;
         backgroundAudio.preload = "auto";
         backgroundAudio.muted = false;
         
-        // Create audio context
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            const audioContext = new AudioContext();
-            
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            
-            const source = audioContext.createMediaElementSource(backgroundAudio);
-            source.connect(audioContext.destination);
-        } catch (e) {
-            console.log('Web Audio API not supported', e);
-        }
+        // Create a hidden iframe to help with autoplay (workaround for Chrome)
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.sandbox = 'allow-same-origin allow-scripts';
+        iframe.src = 'about:blank';
+        document.body.appendChild(iframe);
         
-        // Function to attempt playback
-        const attemptPlayback = () => {
+        // Multiple autoplay attempts
+        const playAttempts = [
+            attemptAutoplay,                   // Immediate attempt
+            () => setTimeout(attemptAutoplay, 500),  // After short delay
+            () => backgroundAudio.addEventListener('canplay', attemptAutoplay), // When ready
+            () => window.addEventListener('load', attemptAutoplay) // On window load
+        ];
+        
+        playAttempts.forEach(attempt => attempt());
+        
+        function attemptAutoplay() {
+            // First try normal play
             const playPromise = backgroundAudio.play();
             
             if (playPromise !== undefined) {
                 playPromise.then(() => {
+                    success();
+                }).catch(error => {
+                    console.log('Normal play failed:', error);
+                    attemptHiddenPlay();
+                });
+            } else {
+                attemptHiddenPlay();
+            }
+        }
+        
+        function attemptHiddenPlay() {
+            // Try playing through hidden iframe (works in some browsers)
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const iframeAudio = iframeDoc.createElement('audio');
+                iframeAudio.src = songs[currentSongIndex];
+                iframeAudio.loop = true;
+                iframeAudio.volume = 0.4;
+                iframeDoc.body.appendChild(iframeAudio);
+                
+                const iframePlay = iframeAudio.play();
+                
+                if (iframePlay !== undefined) {
+                    iframePlay.then(() => {
+                        // If hidden play works, switch to main audio
+                        iframeAudio.pause();
+                        backgroundAudio.play().then(success).catch(fail);
+                    }).catch(() => {
+                        iframeAudio.remove();
+                        fail();
+                    });
+                }
+            } catch (e) {
+                fail();
+            }
+        }
+        
+        function success() {
+            isPlaying = true;
+            audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+            console.log('Audio playback started successfully');
+        }
+        
+        function fail() {
+            console.log('All autoplay attempts failed');
+            audioToggle.innerHTML = '<i class="fas fa-play"></i>';
+            
+            // Fallback to click-to-play
+            const playOnInteraction = () => {
+                backgroundAudio.play().then(() => {
                     isPlaying = true;
                     audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                }).catch(error => {
-                    console.log('Playback prevented:', error);
-                    const playOnInteraction = () => {
-                        backgroundAudio.play().then(() => {
-                            isPlaying = true;
-                            audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                            document.removeEventListener('click', playOnInteraction);
-                            document.removeEventListener('touchstart', playOnInteraction);
-                            document.removeEventListener('keydown', playOnInteraction);
-                        }).catch(err => {
-                            console.log('Playback failed:', err);
-                        });
-                    };
-                    
-                    document.addEventListener('click', playOnInteraction, { once: true });
-                    document.addEventListener('touchstart', playOnInteraction, { once: true });
-                    document.addEventListener('keydown', playOnInteraction, { once: true });
+                    document.removeEventListener('click', playOnInteraction);
+                    document.removeEventListener('touchstart', playOnInteraction);
+                    document.removeEventListener('keydown', playOnInteraction);
+                }).catch(err => {
+                    console.log('Interaction play failed:', err);
                 });
-            }
-        };
+            };
+            
+            document.addEventListener('click', playOnInteraction, { once: true });
+            document.addEventListener('touchstart', playOnInteraction, { once: true });
+            document.addEventListener('keydown', playOnInteraction, { once: true });
+        }
         
-        // Try to play immediately
-        attemptPlayback();
-        backgroundAudio.addEventListener('canplaythrough', attemptPlayback);
         backgroundAudio.addEventListener('ended', playNextSong);
     }
 
