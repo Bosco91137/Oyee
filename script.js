@@ -18,15 +18,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
     // Initialize Audio - Auto play on load
-    function initAudio() {
-        if (songs.length === 0) return;
-        
-        backgroundAudio.src = songs[currentSongIndex];
-        backgroundAudio.volume = 0.4;
-        backgroundAudio.loop = true;
-        backgroundAudio.addEventListener('ended', playNextSong);
-        
-        // Try to play automatically (may be blocked by browser policy)
+   
+function initAudio() {
+    if (songs.length === 0) return;
+    
+    // Create audio context (required for some browsers)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioContext = new AudioContext();
+    
+    // Create audio element
+    backgroundAudio.src = songs[currentSongIndex];
+    backgroundAudio.volume = 0.4;
+    backgroundAudio.loop = true;
+    backgroundAudio.preload = "auto"; // Force preloading
+    
+    // Create audio node
+    const source = audioContext.createMediaElementSource(backgroundAudio);
+    source.connect(audioContext.destination);
+    
+    // Attempt to play immediately
+    const playAudio = () => {
         const playPromise = backgroundAudio.play();
         
         if (playPromise !== undefined) {
@@ -34,27 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 isPlaying = true;
                 audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
             }).catch(error => {
-                console.log('Auto-play was prevented:', error);
-                // Show play button if autoplay was prevented
-                audioToggle.innerHTML = '<i class="fas fa-play"></i>';
-                isPlaying = false;
-                
-                // Add click event to document for audio initialization
-                const initAudioOnClick = () => {
-                    backgroundAudio.play().then(() => {
-                        isPlaying = true;
-                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                        document.removeEventListener('click', initAudioOnClick);
-                    }).catch(err => {
-                        console.log('Playback failed:', err);
-                    });
-                };
-                
-                document.addEventListener('click', initAudioOnClick, { once: true });
-            });
-        }
-    }
-
+                console.log('Playback prevented:', error);
+                // If blocked, wait for user interaction
+                document.addEventListener('click', () => {
+                    backgroundAudio.play().then(()
     function playNextSong() {
         currentSongIndex = (currentSongIndex + 1) % songs.length;
         backgroundAudio.src = songs[currentSongIndex];
