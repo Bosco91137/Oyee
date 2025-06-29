@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configuration
     const songs = [
-        'Damso - 60 Annees.mp3',
-        'Damso - 60 Annees.mp3'
+      'Damso -  60 Annees.mp3',
+      'Damso -  60 Annees.mp3'
     ];
     let currentSongIndex = 0;
     let isPlaying = false;
