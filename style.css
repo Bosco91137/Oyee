@@ -183,39 +183,7 @@ a:hover {
 .nav-links a:hover::after {
     width: 100%;
 }
-/* Add these to enhance the animations */
-.animate-text,
-.competence-card,
-.projet-card,
-.service-card,
-.skill-card,
-.title-card,
-.stat-card,
-.testimonial-card {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-}
 
-/* Smooth transitions for theme changes */
-body {
-    transition: background-color 0.8s ease, color 0.8s ease;
-}
-
-/* Ensure text colors transition smoothly */
-h1, h2, h3, h4, h5, h6, p, a, li, span {
-    transition: color 0.8s ease;
-}
-
-/* Navbar theming */
-.navbar {
-    transition: background-color 0.8s ease;
-}
-
-/* Buttons theming */
-.btn {
-    transition: background-color 0.8s ease, transform 0.3s ease;
-}
 .hamburger {
     display: none;
     cursor: pointer;
