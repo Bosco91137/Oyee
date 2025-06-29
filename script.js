@@ -1,262 +1,169 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elements
+    // Variables
     const audioToggle = document.getElementById('audioToggle');
     const backgroundAudio = document.getElementById('backgroundAudio');
     const hamburger = document.getElementById('hamburger');
     const navLinks = document.getElementById('navLinks');
     const sections = document.querySelectorAll('.section');
     const navItems = document.querySelectorAll('.nav-links a');
-    const emailForm = document.getElementById('emailForm');
-    
-    // Configuration
     const songs = [
-        'Damso - 60 Annees.mp3',
-        'Damso - 60 Annees.mp3'
+        'Damso -  60 Annees.mp3',
+      
+        
     ];
     let currentSongIndex = 0;
     let isPlaying = false;
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    // Initialize Audio - Auto play on load
-   
-function initAudio() {
-    if (songs.length === 0) return;
-    
-    // Create audio context (required for some browsers)
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioContext = new AudioContext();
-    
-    // Create audio element
-    backgroundAudio.src = songs[currentSongIndex];
-    backgroundAudio.volume = 0.4;
-    backgroundAudio.loop = true;
-    backgroundAudio.preload = "auto"; // Force preloading
-    
-    // Create audio node
-    const source = audioContext.createMediaElementSource(backgroundAudio);
-    source.connect(audioContext.destination);
-    
-    // Attempt to play immediately
-    const playAudio = () => {
-        const playPromise = backgroundAudio.play();
+    // Thèmes pour chaque section
+    const sectionThemes = {
+        'accueil': { bg: '#121212', text: '#ffffff', accent: '#4a6bff' },
+        'professionnel': { bg: '#1a1a2e', text: '#e6e6e6', accent: '#4ecca3' },
+        'debrouillard': { bg: '#16213e', text: '#ffffff', accent: '#f9a828' },
+        'titres': { bg: '#0f3460', text: '#ffffff', accent: '#e94560' },
+        'apropos': { bg: '#1b262c', text: '#bbe1fa', accent: '#3282b8' },
+        'temoignages': { bg: '#222831', text: '#eeeeee', accent: '#00adb5' },
+        'contact': { bg: '#000000', text: '#ffffff', accent: '#f50057' }
+    };
+
+    // Initialiser l'audio
+    function initAudio() {
+        backgroundAudio.src = songs[currentSongIndex];
+        backgroundAudio.volume = 0.4;
+        backgroundAudio.addEventListener('ended', playNextSong);
         
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                isPlaying = true;
-                audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-            }).catch(error => {
-                console.log('Playback prevented:', error);
-                // If blocked, wait for user interaction
-                document.addEventListener('click', () => {
-                    backgroundAudio.play().then(()
+        // Démarrer automatiquement (avec permission utilisateur)
+        document.addEventListener('click', function() {
+            if (!isPlaying) {
+                backgroundAudio.play()
+                    .then(() => {
+                        isPlaying = true;
+                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                    })
+                    .catch(error => console.log('Audio playback failed:', error));
+            }
+        }, { once: true });
+    }
+
+    // Jouer la chanson suivante
     function playNextSong() {
         currentSongIndex = (currentSongIndex + 1) % songs.length;
         backgroundAudio.src = songs[currentSongIndex];
         backgroundAudio.play();
     }
 
-    // Audio Toggle
-    audioToggle.addEventListener('click', function(e) {
-        e.stopPropagation(); // Prevent triggering document click handler
-        
-        if (songs.length === 0) return;
-        
+    // Basculer l'audio play/pause
+    audioToggle.addEventListener('click', function() {
         if (isPlaying) {
             backgroundAudio.pause();
             audioToggle.innerHTML = '<i class="fas fa-play"></i>';
         } else {
-            backgroundAudio.play().then(() => {
-                audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-            }).catch(error => {
-                console.log('Playback failed:', error);
-            });
+            backgroundAudio.play()
+                .then(() => {
+                    audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                })
+                .catch(error => console.log('Audio playback failed:', error));
         }
         isPlaying = !isPlaying;
     });
 
-    // Mobile Menu
+    // Menu hamburger
     hamburger.addEventListener('click', function() {
-        this.classList.toggle('active');
         navLinks.classList.toggle('active');
-        document.body.classList.toggle('no-scroll');
-        
-        // Close menu when clicking on a link
-        if (navLinks.classList.contains('active')) {
-            navLinks.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', closeMenu);
-            });
-        }
+        hamburger.classList.toggle('active');
     });
-    
-    function closeMenu() {
-        hamburger.classList.remove('active');
-        navLinks.classList.remove('active');
-        document.body.classList.remove('no-scroll');
-    }
 
-    // Navigation
+    // Fermer le menu mobile lorsqu'un lien est cliqué
     navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
-            // Close mobile menu if open
+        item.addEventListener('click', function() {
             if (navLinks.classList.contains('active')) {
-                closeMenu();
-            }
-            
-            // Handle anchor links
-            const targetId = this.getAttribute('href');
-            if (targetId.startsWith('#')) {
-                e.preventDefault();
-                const targetSection = document.querySelector(targetId);
-                if (targetSection) {
-                    const offset = isMobile ? 70 : 80;
-                    const targetPosition = targetSection.getBoundingClientRect().top + window.pageYOffset - offset;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                    
-                    // Update URL without page jump
-                    if (history.pushState) {
-                        history.pushState(null, null, targetId);
-                    }
-                }
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('active');
             }
         });
     });
 
-    // Section Animations
+    // Observer les sections pour le changement de thème et l'animation
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.3
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const sectionId = entry.target.id;
+                changeTheme(sectionId);
+                animateSection(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+    // Changer le thème en fonction de la section visible
+    function changeTheme(sectionId) {
+        const theme = sectionThemes[sectionId];
+        if (!theme) return;
+
+        document.documentElement.style.setProperty('--bg-color', theme.bg);
+        document.documentElement.style.setProperty('--text-color', theme.text);
+        document.documentElement.style.setProperty('--accent-color', theme.accent);
+    }
+
+    // Animer les éléments de la section lorsqu'elle devient visible
     function animateSection(section) {
-        const elements = section.querySelectorAll(
-            '.animate-text, .competence-card, .projet-card, .service-card, ' +
-            '.skill-card, .title-card, .stat-card, .testimonial-card'
-        );
+        const animateElements = section.querySelectorAll('.animate-text, .competence-card, .projet-card, .service-card, .skill-card, .title-card, .stat-card, .testimonial-card');
         
-        // On mobile, show all immediately with small delay for better UX
-        if (isMobile) {
-            elements.forEach((el, index) => {
-                setTimeout(() => {
-                    el.classList.add('visible');
-                }, index * 50);
-            });
-            return;
-        }
-        
-        // On desktop, animate with delay
-        elements.forEach((el, index) => {
+        animateElements.forEach((element, index) => {
             setTimeout(() => {
-                el.classList.add('visible');
+                element.style.opacity = '1';
+                element.style.transform = 'translateY(0)';
             }, index * 100);
         });
     }
 
-    // Initialize sections based on device
-    function initSections() {
-        if (isMobile) {
-            // Show all sections with small delay on mobile
-            sections.forEach(section => {
-                setTimeout(() => {
-                    animateSection(section);
-                }, 100);
-            });
-        } else {
-            // Use IntersectionObserver for desktop
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -100px 0px'
-            };
-            
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        animateSection(entry.target);
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, observerOptions);
-            
-            sections.forEach(section => {
-                observer.observe(section);
-                
-                // Animate sections already in view
-                const rect = section.getBoundingClientRect();
-                if (rect.top < window.innerHeight * 0.75) {
-                    animateSection(section);
-                    observer.unobserve(section);
-                }
-            });
-        }
-    }
-
-    // Contact Form
+    // Envoyer le formulaire de contact
+    const emailForm = document.getElementById('emailForm');
     if (emailForm) {
         emailForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const subject = document.getElementById('subject').value.trim();
-            const message = document.getElementById('message').value.trim();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
             
-            if (!name || !email || !subject || !message) {
-                alert('Please fill in all fields');
-                return;
-            }
+            // Ici, vous ajouteriez le code pour envoyer l'email
+            // Pour l'exemple, nous allons simplement afficher une alerte
+            alert(`Merci ${name}, votre message a été envoyé! Je vous répondrai dès que possible.`);
             
-            // Here you would normally send the form data
-            alert(`Thank you ${name}! Your message has been sent. I'll respond soon.`);
             emailForm.reset();
         });
     }
 
-    // Navbar Scroll Effect
-    function handleScroll() {
-        if (window.scrollY > 100) {
+    // Initialiser les animations au chargement
+    window.addEventListener('load', function() {
+        const accueilSection = document.getElementById('accueil');
+        if (accueilSection) {
+            animateSection(accueilSection);
+        }
+        
+        // Initialiser l'audio
+        initAudio();
+    });
+
+    // Animation au défilement
+    window.addEventListener('scroll', function() {
+        const scrollPosition = window.scrollY;
+        
+        // Animation de la navbar
+        if (scrollPosition > 100) {
             document.querySelector('.navbar').classList.add('scrolled');
         } else {
             document.querySelector('.navbar').classList.remove('scrolled');
         }
-    }
-    
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initialize on load
-
-    // Handle page load with hash in URL
-    function handleHashOnLoad() {
-        if (window.location.hash) {
-            const targetSection = document.querySelector(window.location.hash);
-            if (targetSection) {
-                setTimeout(() => {
-                    const offset = isMobile ? 70 : 80;
-                    const targetPosition = targetSection.getBoundingClientRect().top + window.pageYOffset - offset;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }, 100);
-            }
-        }
-    }
-    
-    window.addEventListener('load', handleHashOnLoad);
-
-    // Handle resize events
-    function handleResize() {
-        // Close menu if open when resizing to desktop
-        if (window.innerWidth > 768 && navLinks.classList.contains('active')) {
-            closeMenu();
-        }
-    }
-    
-    window.addEventListener('resize', handleResize);
-
-    // Initialize everything
-    initAudio();
-    initSections();
-    
-    // Add loaded class to body when everything is ready
-    setTimeout(() => {
-        document.body.classList.add('loaded');
-    }, 100);
+    });
 });
