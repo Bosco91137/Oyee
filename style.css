@@ -385,7 +385,6 @@ a:hover {
     gap: 1.5rem;
 }
 
-
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.375rem, 1fr));
@@ -475,7 +474,7 @@ a:hover {
     transform: scale(1.05);
 }
 
-/* Section Témoignages */
+/* Testimonials Section */
 .testimonials-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -527,8 +526,8 @@ a:hover {
 }
 
 .testimonial-author img {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     object-fit: cover;
     margin-right: 15px;
@@ -544,6 +543,7 @@ a:hover {
     color: rgba(255, 255, 255, 0.7);
     margin-bottom: 0;
 }
+
 /* Contact Section */
 .contact-content {
     display: flex;
