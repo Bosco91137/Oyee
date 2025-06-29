@@ -7,52 +7,92 @@ document.addEventListener('DOMContentLoaded', function() {
     const sections = document.querySelectorAll('.section');
     const navItems = document.querySelectorAll('.nav-links a');
     const emailForm = document.getElementById('emailForm');
+    const body = document.body;
     
     // Configuration
     const songs = [
-      'Damso -  60 Annees.mp3',
-      'Damso -  60 Annees.mp3'
+        'Damso - 60 Annees.mp3'
     ];
     let currentSongIndex = 0;
     let isPlaying = false;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    // Initialize Audio - Auto play on load
+    // Section themes
+    const sectionThemes = {
+        'accueil': { bg: '#121212', text: '#ffffff', accent: '#4a6bff' },
+        'professionnel': { bg: '#1a1a2e', text: '#e6f7ff', accent: '#4cc9f0' },
+        'debrouillard': { bg: '#2d2424', text: '#f5e8c7', accent: '#b85c38' },
+        'titres': { bg: '#16213e', text: '#e8f9fd', accent: '#0f4c75' },
+        'apropos': { bg: '#1e1e1e', text: '#f8f1f1', accent: '#025464' },
+        'temoignages': { bg: '#2c003e', text: '#f5e6ca', accent: '#fe346e' },
+        'contact': { bg: '#0f3460', text: '#e8f9fd', accent: '#533483' }
+    };
+
+    // Initialize Audio with aggressive autoplay
     function initAudio() {
         if (songs.length === 0) return;
         
+        // Create audio element with all necessary attributes
         backgroundAudio.src = songs[currentSongIndex];
         backgroundAudio.volume = 0.4;
         backgroundAudio.loop = true;
-        backgroundAudio.addEventListener('ended', playNextSong);
+        backgroundAudio.preload = "auto";
+        backgroundAudio.muted = false; // Ensure not muted
         
-        // Try to play automatically (may be blocked by browser policy)
-        const playPromise = backgroundAudio.play();
-        
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                isPlaying = true;
-                audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-            }).catch(error => {
-                console.log('Auto-play was prevented:', error);
-                // Show play button if autoplay was prevented
-                audioToggle.innerHTML = '<i class="fas fa-play"></i>';
-                isPlaying = false;
-                
-                // Add click event to document for audio initialization
-                const initAudioOnClick = () => {
-                    backgroundAudio.play().then(() => {
-                        isPlaying = true;
-                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                        document.removeEventListener('click', initAudioOnClick);
-                    }).catch(err => {
-                        console.log('Playback failed:', err);
-                    });
-                };
-                
-                document.addEventListener('click', initAudioOnClick, { once: true });
-            });
+        // Create audio context (required for some browsers)
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioContext = new AudioContext();
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            const source = audioContext.createMediaElementSource(backgroundAudio);
+            source.connect(audioContext.destination);
+        } catch (e) {
+            console.log('Web Audio API not supported', e);
         }
+        
+        // Function to attempt playback
+        const attemptPlayback = () => {
+            const playPromise = backgroundAudio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    isPlaying = true;
+                    audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                    console.log('Playback started successfully');
+                }).catch(error => {
+                    console.log('Playback prevented:', error);
+                    // If blocked, wait for user interaction
+                    const playOnInteraction = () => {
+                        backgroundAudio.play().then(() => {
+                            isPlaying = true;
+                            audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                            document.removeEventListener('click', playOnInteraction);
+                            document.removeEventListener('touchstart', playOnInteraction);
+                            document.removeEventListener('keydown', playOnInteraction);
+                        }).catch(err => {
+                            console.log('Playback failed:', err);
+                        });
+                    };
+                    
+                    document.addEventListener('click', playOnInteraction, { once: true });
+                    document.addEventListener('touchstart', playOnInteraction, { once: true });
+                    document.addEventListener('keydown', playOnInteraction, { once: true });
+                });
+            }
+        };
+        
+        // Try to play immediately
+        attemptPlayback();
+        
+        // Also try when audio is ready
+        backgroundAudio.addEventListener('canplaythrough', attemptPlayback);
+        
+        // Handle song ending
+        backgroundAudio.addEventListener('ended', playNextSong);
     }
 
     function playNextSong() {
@@ -63,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Audio Toggle
     audioToggle.addEventListener('click', function(e) {
-        e.stopPropagation(); // Prevent triggering document click handler
+        e.stopPropagation();
         
         if (songs.length === 0) return;
         
@@ -86,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function() {
         navLinks.classList.toggle('active');
         document.body.classList.toggle('no-scroll');
         
-        // Close menu when clicking on a link
         if (navLinks.classList.contains('active')) {
             navLinks.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', closeMenu);
@@ -103,12 +142,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Navigation
     navItems.forEach(item => {
         item.addEventListener('click', function(e) {
-            // Close mobile menu if open
             if (navLinks.classList.contains('active')) {
                 closeMenu();
             }
             
-            // Handle anchor links
             const targetId = this.getAttribute('href');
             if (targetId.startsWith('#')) {
                 e.preventDefault();
@@ -122,7 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         behavior: 'smooth'
                     });
                     
-                    // Update URL without page jump
                     if (history.pushState) {
                         history.pushState(null, null, targetId);
                     }
@@ -131,67 +167,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Section Animations
-    function animateSection(section) {
-        const elements = section.querySelectorAll(
-            '.animate-text, .competence-card, .projet-card, .service-card, ' +
-            '.skill-card, .title-card, .stat-card, .testimonial-card'
-        );
-        
-        // On mobile, show all immediately with small delay for better UX
-        if (isMobile) {
-            elements.forEach((el, index) => {
-                setTimeout(() => {
-                    el.classList.add('visible');
-                }, index * 50);
-            });
-            return;
-        }
-        
-        // On desktop, animate with delay
-        elements.forEach((el, index) => {
-            setTimeout(() => {
-                el.classList.add('visible');
-            }, index * 100);
+    // Section Animations and Theme Changes
+    function handleSectionChanges() {
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            const sectionId = section.id;
+            const theme = sectionThemes[sectionId];
+            
+            // Check if section is in view
+            if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
+                // Apply theme if section is active
+                if (theme) {
+                    document.documentElement.style.setProperty('--bg-color', theme.bg);
+                    document.documentElement.style.setProperty('--text-color', theme.text);
+                    document.documentElement.style.setProperty('--accent-color', theme.accent);
+                }
+                
+                // Animate elements
+                const elements = section.querySelectorAll(
+                    '.animate-text, .competence-card, .projet-card, .service-card, ' +
+                    '.skill-card, .title-card, .stat-card, .testimonial-card'
+                );
+                
+                elements.forEach((el, index) => {
+                    setTimeout(() => {
+                        el.classList.add('visible');
+                    }, index * 100);
+                });
+            }
         });
     }
 
-    // Initialize sections based on device
+    // Initialize sections and scroll handler
     function initSections() {
-        if (isMobile) {
-            // Show all sections with small delay on mobile
-            sections.forEach(section => {
-                setTimeout(() => {
-                    animateSection(section);
-                }, 100);
-            });
-        } else {
-            // Use IntersectionObserver for desktop
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -100px 0px'
-            };
+        // Initial check
+        handleSectionChanges();
+        
+        // Set up scroll listener
+        let isScrolling;
+        window.addEventListener('scroll', function() {
+            // Clear the timeout if it's already set
+            clearTimeout(isScrolling);
             
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        animateSection(entry.target);
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, observerOptions);
-            
-            sections.forEach(section => {
-                observer.observe(section);
-                
-                // Animate sections already in view
-                const rect = section.getBoundingClientRect();
-                if (rect.top < window.innerHeight * 0.75) {
-                    animateSection(section);
-                    observer.unobserve(section);
-                }
-            });
-        }
+            // Set a timeout to run after scrolling stops
+            isScrolling = setTimeout(function() {
+                handleSectionChanges();
+            }, 100);
+        }, false);
     }
 
     // Contact Form
@@ -209,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Here you would normally send the form data
             alert(`Thank you ${name}! Your message has been sent. I'll respond soon.`);
             emailForm.reset();
         });
@@ -225,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initialize on load
+    handleScroll();
 
     // Handle page load with hash in URL
     function handleHashOnLoad() {
@@ -249,7 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle resize events
     function handleResize() {
-        // Close menu if open when resizing to desktop
         if (window.innerWidth > 768 && navLinks.classList.contains('active')) {
             closeMenu();
         }
@@ -261,8 +281,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initAudio();
     initSections();
     
-    // Add loaded class to body when everything is ready
+    // Add loaded class to body
     setTimeout(() => {
-        document.body.classList.add('loaded');
+        body.classList.add('loaded');
     }, 100);
 });
