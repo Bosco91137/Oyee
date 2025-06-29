@@ -7,52 +7,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const sections = document.querySelectorAll('.section');
     const navItems = document.querySelectorAll('.nav-links a');
     const songs = [
-        'Damso -  60 Annees.mp3',
-      
-        
+        'Damso - 60 Annees.mp3',
+        // Add more songs if needed
     ];
     let currentSongIndex = 0;
     let isPlaying = false;
 
-    // Thèmes pour chaque section
-    const sectionThemes = {
-        'accueil': { bg: '#121212', text: '#ffffff', accent: '#4a6bff' },
-        'professionnel': { bg: '#1a1a2e', text: '#e6e6e6', accent: '#4ecca3' },
-        'debrouillard': { bg: '#16213e', text: '#ffffff', accent: '#f9a828' },
-        'titres': { bg: '#0f3460', text: '#ffffff', accent: '#e94560' },
-        'apropos': { bg: '#1b262c', text: '#bbe1fa', accent: '#3282b8' },
-        'temoignages': { bg: '#222831', text: '#eeeeee', accent: '#00adb5' },
-        'contact': { bg: '#000000', text: '#ffffff', accent: '#f50057' }
-    };
-
-    // Initialiser l'audio
+    // Initialize audio
     function initAudio() {
-        backgroundAudio.src = songs[currentSongIndex];
-        backgroundAudio.volume = 0.4;
-        backgroundAudio.addEventListener('ended', playNextSong);
-        
-        // Démarrer automatiquement (avec permission utilisateur)
-        document.addEventListener('click', function() {
-            if (!isPlaying) {
-                backgroundAudio.play()
-                    .then(() => {
-                        isPlaying = true;
-                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                    })
-                    .catch(error => console.log('Audio playback failed:', error));
-            }
-        }, { once: true });
+        if (songs.length > 0) {
+            backgroundAudio.src = songs[currentSongIndex];
+            backgroundAudio.volume = 0.4;
+            backgroundAudio.addEventListener('ended', playNextSong);
+            
+            // Start audio on first user interaction
+            document.addEventListener('click', function initAudioPlay() {
+                if (!isPlaying) {
+                    backgroundAudio.play()
+                        .then(() => {
+                            isPlaying = true;
+                            audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                        })
+                        .catch(error => console.log('Audio playback failed:', error));
+                }
+                document.removeEventListener('click', initAudioPlay);
+            });
+        }
     }
 
-    // Jouer la chanson suivante
+    // Play next song
     function playNextSong() {
-        currentSongIndex = (currentSongIndex + 1) % songs.length;
-        backgroundAudio.src = songs[currentSongIndex];
-        backgroundAudio.play();
+        if (songs.length > 0) {
+            currentSongIndex = (currentSongIndex + 1) % songs.length;
+            backgroundAudio.src = songs[currentSongIndex];
+            backgroundAudio.play();
+        }
     }
 
-    // Basculer l'audio play/pause
+    // Toggle audio play/pause
     audioToggle.addEventListener('click', function() {
+        if (songs.length === 0) return;
+        
         if (isPlaying) {
             backgroundAudio.pause();
             audioToggle.innerHTML = '<i class="fas fa-play"></i>';
@@ -66,66 +61,80 @@ document.addEventListener('DOMContentLoaded', function() {
         isPlaying = !isPlaying;
     });
 
-    // Menu hamburger
+    // Mobile menu toggle
     hamburger.addEventListener('click', function() {
+        this.classList.toggle('active');
         navLinks.classList.toggle('active');
-        hamburger.classList.toggle('active');
+        document.body.classList.toggle('no-scroll');
     });
 
-    // Fermer le menu mobile lorsqu'un lien est cliqué
+    // Close mobile menu when clicking a link
     navItems.forEach(item => {
         item.addEventListener('click', function() {
             if (navLinks.classList.contains('active')) {
-                navLinks.classList.remove('active');
                 hamburger.classList.remove('active');
+                navLinks.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            }
+            
+            // Smooth scroll to section
+            const targetId = this.getAttribute('href');
+            if (targetId.startsWith('#')) {
+                const targetSection = document.querySelector(targetId);
+                if (targetSection) {
+                    window.scrollTo({
+                        top: targetSection.offsetTop - 70, // Account for fixed header
+                        behavior: 'smooth'
+                    });
+                }
             }
         });
     });
 
-    // Observer les sections pour le changement de thème et l'animation
+    // Intersection Observer for animations and theme changes
     const observerOptions = {
         root: null,
         rootMargin: '0px',
-        threshold: 0.3
+        threshold: 0.2
     };
 
-    const observer = new IntersectionObserver(function(entries) {
+    const sectionObserver = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const sectionId = entry.target.id;
-                changeTheme(sectionId);
-                animateSection(entry.target);
+                const section = entry.target;
+                animateSection(section);
+                
+                // Update URL hash without scrolling
+                if (history.pushState) {
+                    history.pushState(null, null, `#${section.id}`);
+                }
             }
         });
     }, observerOptions);
 
+    // Observe all sections
     sections.forEach(section => {
-        observer.observe(section);
+        sectionObserver.observe(section);
     });
 
-    // Changer le thème en fonction de la section visible
-    function changeTheme(sectionId) {
-        const theme = sectionThemes[sectionId];
-        if (!theme) return;
-
-        document.documentElement.style.setProperty('--bg-color', theme.bg);
-        document.documentElement.style.setProperty('--text-color', theme.text);
-        document.documentElement.style.setProperty('--accent-color', theme.accent);
-    }
-
-    // Animer les éléments de la section lorsqu'elle devient visible
+    // Animate elements in a section when it becomes visible
     function animateSection(section) {
-        const animateElements = section.querySelectorAll('.animate-text, .competence-card, .projet-card, .service-card, .skill-card, .title-card, .stat-card, .testimonial-card');
+        const animateElements = section.querySelectorAll(
+            '.animate-text, .competence-card, .projet-card, .service-card, ' +
+            '.skill-card, .title-card, .stat-card, .testimonial-card'
+        );
         
         animateElements.forEach((element, index) => {
-            setTimeout(() => {
-                element.style.opacity = '1';
-                element.style.transform = 'translateY(0)';
-            }, index * 100);
+            // Only animate if not already animated
+            if (!element.classList.contains('animated')) {
+                setTimeout(() => {
+                    element.classList.add('visible', 'animated');
+                }, index * 150); // Stagger animations
+            }
         });
     }
 
-    // Envoyer le formulaire de contact
+    // Contact form submission
     const emailForm = document.getElementById('emailForm');
     if (emailForm) {
         emailForm.addEventListener('submit', function(e) {
@@ -136,34 +145,56 @@ document.addEventListener('DOMContentLoaded', function() {
             const subject = document.getElementById('subject').value;
             const message = document.getElementById('message').value;
             
-            // Ici, vous ajouteriez le code pour envoyer l'email
-            // Pour l'exemple, nous allons simplement afficher une alerte
-            alert(`Merci ${name}, votre message a été envoyé! Je vous répondrai dès que possible.`);
+            // Here you would add code to actually send the email
+            // For now we'll just show a confirmation
+            alert(`Thank you ${name}, your message has been sent! I'll respond as soon as possible.`);
             
             emailForm.reset();
         });
     }
 
-    // Initialiser les animations au chargement
-    window.addEventListener('load', function() {
-        const accueilSection = document.getElementById('accueil');
-        if (accueilSection) {
-            animateSection(accueilSection);
-        }
-        
-        // Initialiser l'audio
-        initAudio();
-    });
+    // Initialize animations on load for elements already in view
+    function checkInitialAnimations() {
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top < window.innerHeight * 0.8) {
+                animateSection(section);
+            }
+        });
+    }
 
-    // Animation au défilement
-    window.addEventListener('scroll', function() {
+    // Navbar scroll effect
+    function handleScroll() {
         const scrollPosition = window.scrollY;
         
-        // Animation de la navbar
+        // Navbar background effect
         if (scrollPosition > 100) {
             document.querySelector('.navbar').classList.add('scrolled');
         } else {
             document.querySelector('.navbar').classList.remove('scrolled');
+        }
+    }
+
+    // Initialize everything
+    window.addEventListener('load', function() {
+        initAudio();
+        checkInitialAnimations();
+    });
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Handle page refresh with hash in URL
+    window.addEventListener('load', function() {
+        if (window.location.hash) {
+            const targetSection = document.querySelector(window.location.hash);
+            if (targetSection) {
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: targetSection.offsetTop - 70,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
         }
     });
 });
