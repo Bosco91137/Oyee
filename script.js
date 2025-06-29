@@ -7,134 +7,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const sections = document.querySelectorAll('.section');
     const navItems = document.querySelectorAll('.nav-links a');
     const emailForm = document.getElementById('emailForm');
-    const body = document.body;
     
     // Configuration
     const songs = [
+        'Damso - 60 Annees.mp3',
         'Damso - 60 Annees.mp3'
     ];
     let currentSongIndex = 0;
     let isPlaying = false;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-    // Section themes
-    const sectionThemes = {
-        'accueil': { bg: '#121212', text: '#ffffff', accent: '#4a6bff' },
-        'professionnel': { bg: '#1a1a2e', text: '#e6f7ff', accent: '#4cc9f0' },
-        'debrouillard': { bg: '#2d2424', text: '#f5e8c7', accent: '#b85c38' },
-        'titres': { bg: '#16213e', text: '#e8f9fd', accent: '#0f4c75' },
-        'apropos': { bg: '#1e1e1e', text: '#f8f1f1', accent: '#025464' },
-        'temoignages': { bg: '#2c003e', text: '#f5e6ca', accent: '#fe346e' },
-        'contact': { bg: '#0f3460', text: '#e8f9fd', accent: '#533483' }
-    };
-
-    // Animation timing
-    const animationSettings = {
-        fadeInDuration: 50,
-        staggerDelay: 50,
-        threshold: 0.2
-    };
-
-    // Initialize Audio with maximum autoplay attempts
+    // Initialize Audio - Auto play on load
     function initAudio() {
         if (songs.length === 0) return;
         
-        // Configure audio element
         backgroundAudio.src = songs[currentSongIndex];
         backgroundAudio.volume = 0.4;
         backgroundAudio.loop = true;
-        backgroundAudio.preload = "auto";
-        backgroundAudio.muted = false;
-        
-        // Create a hidden iframe to help with autoplay (workaround for Chrome)
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.sandbox = 'allow-same-origin allow-scripts';
-        iframe.src = 'about:blank';
-        document.body.appendChild(iframe);
-        
-        // Multiple autoplay attempts
-        const playAttempts = [
-            attemptAutoplay,                   // Immediate attempt
-            () => setTimeout(attemptAutoplay, 500),  // After short delay
-            () => backgroundAudio.addEventListener('canplay', attemptAutoplay), // When ready
-            () => window.addEventListener('load', attemptAutoplay) // On window load
-        ];
-        
-        playAttempts.forEach(attempt => attempt());
-        
-        function attemptAutoplay() {
-            // First try normal play
-            const playPromise = backgroundAudio.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    success();
-                }).catch(error => {
-                    console.log('Normal play failed:', error);
-                    attemptHiddenPlay();
-                });
-            } else {
-                attemptHiddenPlay();
-            }
-        }
-        
-        function attemptHiddenPlay() {
-            // Try playing through hidden iframe (works in some browsers)
-            try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                const iframeAudio = iframeDoc.createElement('audio');
-                iframeAudio.src = songs[currentSongIndex];
-                iframeAudio.loop = true;
-                iframeAudio.volume = 0.4;
-                iframeDoc.body.appendChild(iframeAudio);
-                
-                const iframePlay = iframeAudio.play();
-                
-                if (iframePlay !== undefined) {
-                    iframePlay.then(() => {
-                        // If hidden play works, switch to main audio
-                        iframeAudio.pause();
-                        backgroundAudio.play().then(success).catch(fail);
-                    }).catch(() => {
-                        iframeAudio.remove();
-                        fail();
-                    });
-                }
-            } catch (e) {
-                fail();
-            }
-        }
-        
-        function success() {
-            isPlaying = true;
-            audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-            console.log('Audio playback started successfully');
-        }
-        
-        function fail() {
-            console.log('All autoplay attempts failed');
-            audioToggle.innerHTML = '<i class="fas fa-play"></i>';
-            
-            // Fallback to click-to-play
-            const playOnInteraction = () => {
-                backgroundAudio.play().then(() => {
-                    isPlaying = true;
-                    audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
-                    document.removeEventListener('click', playOnInteraction);
-                    document.removeEventListener('touchstart', playOnInteraction);
-                    document.removeEventListener('keydown', playOnInteraction);
-                }).catch(err => {
-                    console.log('Interaction play failed:', err);
-                });
-            };
-            
-            document.addEventListener('click', playOnInteraction, { once: true });
-            document.addEventListener('touchstart', playOnInteraction, { once: true });
-            document.addEventListener('keydown', playOnInteraction, { once: true });
-        }
-        
         backgroundAudio.addEventListener('ended', playNextSong);
+        
+        // Try to play automatically (may be blocked by browser policy)
+        const playPromise = backgroundAudio.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                isPlaying = true;
+                audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+            }).catch(error => {
+                console.log('Auto-play was prevented:', error);
+                // Show play button if autoplay was prevented
+                audioToggle.innerHTML = '<i class="fas fa-play"></i>';
+                isPlaying = false;
+                
+                // Add click event to document for audio initialization
+                const initAudioOnClick = () => {
+                    backgroundAudio.play().then(() => {
+                        isPlaying = true;
+                        audioToggle.innerHTML = '<i class="fas fa-pause"></i>';
+                        document.removeEventListener('click', initAudioOnClick);
+                    }).catch(err => {
+                        console.log('Playback failed:', err);
+                    });
+                };
+                
+                document.addEventListener('click', initAudioOnClick, { once: true });
+            });
+        }
     }
 
     function playNextSong() {
@@ -145,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Audio Toggle
     audioToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
+        e.stopPropagation(); // Prevent triggering document click handler
         
         if (songs.length === 0) return;
         
@@ -168,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         navLinks.classList.toggle('active');
         document.body.classList.toggle('no-scroll');
         
+        // Close menu when clicking on a link
         if (navLinks.classList.contains('active')) {
             navLinks.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', closeMenu);
@@ -184,10 +103,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Navigation
     navItems.forEach(item => {
         item.addEventListener('click', function(e) {
+            // Close mobile menu if open
             if (navLinks.classList.contains('active')) {
                 closeMenu();
             }
             
+            // Handle anchor links
             const targetId = this.getAttribute('href');
             if (targetId.startsWith('#')) {
                 e.preventDefault();
@@ -201,6 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         behavior: 'smooth'
                     });
                     
+                    // Update URL without page jump
                     if (history.pushState) {
                         history.pushState(null, null, targetId);
                     }
@@ -209,90 +131,67 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Theme transition animation
-    function applyThemeTransition(newTheme) {
-        body.style.transition = 'background-color 0.8s ease, color 0.8s ease';
-        document.documentElement.style.setProperty('--bg-color', newTheme.bg);
-        document.documentElement.style.setProperty('--text-color', newTheme.text);
-        document.documentElement.style.setProperty('--accent-color', newTheme.accent);
-        
-        // Remove transition after animation completes
-        setTimeout(() => {
-            body.style.transition = 'none';
-        }, 100);
-    }
-
-    // Progressive element animation
-    function animateElements(section) {
-        const animatableElements = section.querySelectorAll(
+    // Section Animations
+    function animateSection(section) {
+        const elements = section.querySelectorAll(
             '.animate-text, .competence-card, .projet-card, .service-card, ' +
             '.skill-card, .title-card, .stat-card, .testimonial-card'
         );
         
-        animatableElements.forEach((el, index) => {
-            // Skip if already animated
-            if (el.classList.contains('animated')) return;
-            
-            // Set initial state
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = `opacity ${animationSettings.fadeInDuration}ms ease-out, transform ${animationSettings.fadeInDuration}ms ease-out`;
-            el.style.transitionDelay = `${index * animationSettings.staggerDelay}ms`;
-            
-            // Trigger animation
-            setTimeout(() => {
-                el.style.opacity = '1';
-                el.style.transform = 'translateY(0)';
-                el.classList.add('animated');
-            }, 50);
-        });
-    }
-
-    // Section detection and handling
-    function handleSectionChanges() {
-        sections.forEach(section => {
-            const rect = section.getBoundingClientRect();
-            const sectionId = section.id;
-            const theme = sectionThemes[sectionId];
-            
-            // Calculate visibility percentage
-            const visibility = Math.min(
-                1,
-                Math.max(
-                    0,
-                    (Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0)
-                ) / Math.min(rect.height, window.innerHeight)
-            );
-            
-            // If section is significantly visible
-            if (visibility > animationSettings.threshold) {
-                // Apply theme if section is active
-                if (theme) {
-                    applyThemeTransition(theme);
-                }
-                
-                // Animate elements
-                animateElements(section);
-            }
-        });
-    }
-
-    // Initialize sections and scroll handler
-    function initSections() {
-        // Initial check
-        handleSectionChanges();
+        // On mobile, show all immediately with small delay for better UX
+        if (isMobile) {
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('visible');
+                }, index * 50);
+            });
+            return;
+        }
         
-        // Set up optimized scroll listener
-        let ticking = false;
-        window.addEventListener('scroll', function() {
-            if (!ticking) {
-                window.requestAnimationFrame(function() {
-                    handleSectionChanges();
-                    ticking = false;
+        // On desktop, animate with delay
+        elements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.add('visible');
+            }, index * 100);
+        });
+    }
+
+    // Initialize sections based on device
+    function initSections() {
+        if (isMobile) {
+            // Show all sections with small delay on mobile
+            sections.forEach(section => {
+                setTimeout(() => {
+                    animateSection(section);
+                }, 100);
+            });
+        } else {
+            // Use IntersectionObserver for desktop
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateSection(entry.target);
+                        observer.unobserve(entry.target);
+                    }
                 });
-                ticking = true;
-            }
-        }, { passive: true });
+            }, observerOptions);
+            
+            sections.forEach(section => {
+                observer.observe(section);
+                
+                // Animate sections already in view
+                const rect = section.getBoundingClientRect();
+                if (rect.top < window.innerHeight * 0.75) {
+                    animateSection(section);
+                    observer.unobserve(section);
+                }
+            });
+        }
     }
 
     // Contact Form
@@ -310,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Here you would normally send the form data
             alert(`Thank you ${name}! Your message has been sent. I'll respond soon.`);
             emailForm.reset();
         });
@@ -325,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.addEventListener('scroll', handleScroll);
-    handleScroll();
+    handleScroll(); // Initialize on load
 
     // Handle page load with hash in URL
     function handleHashOnLoad() {
@@ -349,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle resize events
     function handleResize() {
+        // Close menu if open when resizing to desktop
         if (window.innerWidth > 768 && navLinks.classList.contains('active')) {
             closeMenu();
         }
@@ -360,8 +261,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initAudio();
     initSections();
     
-    // Add loaded class to body
+    // Add loaded class to body when everything is ready
     setTimeout(() => {
-        body.classList.add('loaded');
+        document.body.classList.add('loaded');
     }, 100);
 });
